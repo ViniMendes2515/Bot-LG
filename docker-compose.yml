@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  lg-ponto-bot:
+    build: .
+    container_name: lg-ponto-bot
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - LG_USER=${LG_USER}
+      - LG_PASS=${LG_PASS}
+    volumes:
+      - ./schedule.json:/app/schedule.json:ro
+      - ./logs:/app/logs
+      - ./screenshots:/app/screenshots
+      - ./state.json:/app/state.json
+    networks:
+      - bot-network
+
+networks:
+  bot-network:
+    driver: bridge

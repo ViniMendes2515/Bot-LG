@@ -1,0 +1,32 @@
+{
+  "name": "lg-ponto-bot",
+  "version": "1.0.0",
+  "description": "Automação para marcação de ponto no sistema LG Autoatendimento",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/index.ts",
+    "start": "node dist/index.js",
+    "run-once": "ts-node src/run-once.ts",
+    "scheduler": "ts-node src/scheduler.ts",
+    "test-dropdown": "NODE_ENV=development ts-node test-dropdown.ts",
+    "test-simple": "NODE_ENV=development ts-node test-simple.ts",
+    "test-debug": "NODE_ENV=development ts-node test-debug.ts",
+    "install-playwright": "playwright install chromium"
+  },
+  "keywords": ["automation", "playwright", "cron", "lg"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@playwright/test": "^1.47.0",
+    "dotenv": "^16.4.5",
+    "node-cron": "^3.0.3",
+    "playwright": "^1.47.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/node-cron": "^3.0.11",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.0"
+  }
+}
