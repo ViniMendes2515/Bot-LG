@@ -37,6 +37,7 @@ class LGPontoBot {
     this.browser = await chromium.launch({
       headless: process.env.HEADLESS !== 'false',
       executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+      ignoreDefaultArgs: ['--enable-automation'],
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -44,6 +45,7 @@ class LGPontoBot {
         '--disable-gpu',
         '--no-zygote',
         '--single-process',
+        '--disable-blink-features=AutomationControlled',
       ],
     });
 
@@ -59,6 +61,7 @@ class LGPontoBot {
     this.context = await this.browser.newContext({
       storageState,
       viewport: { width: 1280, height: 720 },
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
     });
 
     this.page = await this.context.newPage();
@@ -80,7 +83,7 @@ class LGPontoBot {
     }
 
     console.log('Fazendo login (etapa 1/2 - preenchendo login)...');
-    
+
     const loginField = await this.page.waitForSelector('#Login', { timeout: 15000 });
     if (!loginField) {
       throw new Error('Campo Login não encontrado');

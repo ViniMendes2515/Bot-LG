@@ -1,5 +1,6 @@
 import { Telegraf } from 'telegraf';
 import { PontoScheduler } from './scheduler';
+import { LGPontoBot } from './run-once';
 
 interface TimeRange {
   start: string;
@@ -92,10 +93,36 @@ export class TelegramBot {
       await ctx.reply(
         'LG Ponto Bot\n\n' +
         '/agendar 08:00-12:00 13:00-18:00 — agenda pares entrada/saida\n' +
+        '/unico start — bate ponto agora (entrada)\n' +
+        '/unico stop — bate ponto agora (saida)\n' +
         '/status — lista jobs ativos\n' +
         '/cancelar — cancela todos os jobs'
       );
     });
+
+    this.bot.command('unico', async (ctx) => {
+      if (!this.isAllowed(ctx.chat.id)) return;
+
+      const args = ctx.message.text.split(' ');
+      const action = args[1] as 'start' | 'stop';
+
+      if (action !== 'start' && action !== 'stop') {
+        await ctx.reply('Uso: /unico start  ou  /unico stop');
+        return;
+      }
+
+      await ctx.reply(`Batendo ponto (${action})...`);
+
+      const bot = new LGPontoBot();
+      try {
+        await bot.run(action);
+        await ctx.reply(`Ponto (${action}) registrado com sucesso.`);
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        await ctx.reply(`Erro ao bater ponto: ${msg}`);
+      }
+    });
+
   }
 
   async launch(): Promise<void> {
