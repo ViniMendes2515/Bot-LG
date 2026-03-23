@@ -74,7 +74,7 @@ RUN chown -R botuser:botuser /app
 USER botuser
 
 # Variáveis de ambiente
-ENV NODE_ENV=production
+ENV NODE_ENV=development
 ENV HEADLESS=true
 
 # Porta (se necessária para monitoramento)
