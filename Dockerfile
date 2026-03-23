@@ -53,7 +53,8 @@ COPY package*.json ./
 # Instalar todas as dependências (incluindo devDependencies para o build)
 RUN npm ci
 
-# Instalar browsers do Playwright
+# Instalar browsers do Playwright num path fixo dentro do /app
+ENV PLAYWRIGHT_BROWSERS_PATH=/app/.playwright-browsers
 RUN npx playwright install chromium
 
 # Copiar código fonte
@@ -74,7 +75,7 @@ RUN chown -R botuser:botuser /app
 USER botuser
 
 # Variáveis de ambiente
-ENV NODE_ENV=development
+ENV NODE_ENV=production
 ENV HEADLESS=true
 
 # Porta (se necessária para monitoramento)
