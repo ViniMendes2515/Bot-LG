@@ -50,8 +50,8 @@ WORKDIR /app
 # Copiar arquivos de dependências
 COPY package*.json ./
 
-# Instalar dependências npm
-RUN npm ci --only=production
+# Instalar todas as dependências (incluindo devDependencies para o build)
+RUN npm ci
 
 # Instalar browsers do Playwright
 RUN npx playwright install chromium
@@ -61,6 +61,9 @@ COPY . .
 
 # Compilar TypeScript
 RUN npm run build
+
+# Remover devDependencies após o build
+RUN npm prune --production
 
 # Criar diretórios necessários
 RUN mkdir -p logs screenshots
