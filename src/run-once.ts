@@ -36,6 +36,7 @@ class LGPontoBot {
   async init(): Promise<void> {
     this.browser = await chromium.launch({
       headless: process.env.NODE_ENV === 'production',
+      executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
     });
 
     let storageState = undefined;
@@ -419,7 +420,12 @@ class LGPontoBot {
     if (!this.page) throw new Error('Page não inicializada');
 
     console.log(`Marcando ponto - ${action}...`);
-    
+
+    const isDev = process.env.NODE_ENV === 'development';
+    if (isDev) {
+      console.log(`[DEV] Modo desenvolvimento ativo - cliques serao simulados`);
+    }
+
     await this.page.waitForLoadState('networkidle');
     await this.page.waitForTimeout(3000);
         
@@ -460,15 +466,21 @@ class LGPontoBot {
           }
           
           if (pontoButton) {
-            
+
+            if (isDev) {
+              console.log(`[DEV] Botao "MARCAR PONTO" encontrado no iframe - clique pulado (action: ${action})`);
+              console.log(`✅ Ponto ${action} marcado com sucesso`);
+              return;
+            }
+
             try {
               await pontoButton.click({ timeout: 10000 });
             } catch (clickError) {
               await pontoButton.evaluate((el: any) => el.click());
             }
-            
+
             await this.page.waitForTimeout(2000);
-            
+
             try {
               console.log('🔍 Procurando botão de confirmação no iframe...');
               
@@ -495,19 +507,22 @@ class LGPontoBot {
               }
               
               if (confirmButton) {
-                
+
                 const isVisible = await confirmButton.isVisible();
-                
                 if (!isVisible) {
                   await this.page.waitForTimeout(1000);
                 }
-                
-                try {
-                  await confirmButton.click({ timeout: 10000 });
-                } catch (clickError) {
-                  await confirmButton.evaluate((el: any) => el.click());
+
+                if (isDev) {
+                  console.log(`[DEV] Botao de confirmacao encontrado no iframe - clique pulado (action: ${action})`);
+                } else {
+                  try {
+                    await confirmButton.click({ timeout: 10000 });
+                  } catch (clickError) {
+                    await confirmButton.evaluate((el: any) => el.click());
+                  }
                 }
-                
+
                 await this.page.waitForTimeout(1000);
               }
               
@@ -548,8 +563,14 @@ class LGPontoBot {
       throw new Error('Botão "MARCAR PONTO" não encontrado nem na página principal nem no iframe');
     }
 
+    if (isDev) {
+      console.log(`[DEV] Botao "MARCAR PONTO" encontrado na pagina principal - clique pulado (action: ${action})`);
+      console.log(`✅ Ponto ${action} marcado com sucesso`);
+      return;
+    }
+
     await pontoButton.click();
-    
+
     await this.page.waitForTimeout(2000);
     
     try {
@@ -577,9 +598,13 @@ class LGPontoBot {
           continue;
         }
       }
-      
+
       if (confirmButton) {
-        await confirmButton.click();
+        if (isDev) {
+          console.log(`[DEV] Botao de confirmacao encontrado na pagina principal - clique pulado (action: ${action})`);
+        } else {
+          await confirmButton.click();
+        }
         await this.page.waitForTimeout(1000);
       }
     } catch {
