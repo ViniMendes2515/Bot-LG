@@ -35,7 +35,7 @@ class LGPontoBot {
 
   async init(): Promise<void> {
     this.browser = await chromium.launch({
-      headless: process.env.NODE_ENV === 'production',
+      headless: process.env.HEADLESS !== 'false',
       executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
       args: [
         '--no-sandbox',
