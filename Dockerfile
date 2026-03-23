@@ -1,4 +1,3 @@
-# Imagem oficial do Playwright — já vem com Chromium e todas as deps do sistema
 FROM mcr.microsoft.com/playwright:v1.55.1-jammy
 
 WORKDIR /app

@@ -13,6 +13,17 @@ interface ScheduleEntry {
 class PontoScheduler {
   private activeJobs: Map<string, cron.ScheduledTask> = new Map();
   private scheduleFile = 'schedule.json';
+  private notifyCallback?: (message: string) => Promise<void>;
+
+  setNotifier(callback: (message: string) => Promise<void>): void {
+    this.notifyCallback = callback;
+  }
+
+  private async notify(message: string): Promise<void> {
+    if (this.notifyCallback) {
+      await this.notifyCallback(message).catch(err => console.error('Erro ao enviar notificacao:', err));
+    }
+  }
 
   async loadSchedule(): Promise<ScheduleEntry[]> {
     try {
@@ -87,8 +98,11 @@ class PontoScheduler {
       try {
         await bot.run(entry.action, entry.at);
         console.log(`Job ${jobId} executado com sucesso`);
+        await this.notify(`Ponto (${entry.action === 'start' ? 'entrada' : 'saida'}) registrado com sucesso. Horario: ${entry.at}`);
       } catch (error) {
         console.error(`Erro no job ${jobId}:`, error);
+        const msg = error instanceof Error ? error.message : String(error);
+        await this.notify(`Erro ao registrar ponto (${entry.action === 'start' ? 'entrada' : 'saida'}) no horario ${entry.at}: ${msg}`);
       }
 
       // Remover job após execução (jobs únicos)
