@@ -1,236 +1,170 @@
 # LG Ponto Bot
 
-Aplicação Node.js + TypeScript para automatização da marcação de ponto no sistema LG Autoatendimento.
+Aplicação Node.js + TypeScript para automatização da marcação de ponto no sistema LG Autoatendimento, com controle via bot do Telegram.
 
-## 🎯 Objetivo
+## Objetivo
 
-Automatizar a marcação de ponto na função "Sobreaviso - Solicitar aprovação", clicando no botão "MARCAR PONTO" em horários pré-definidos.
+Automatizar a marcação de ponto na função "Sobreaviso - Solicitar aprovação", clicando no botão "MARCAR PONTO" em horários pré-definidos ou sob demanda via Telegram.
 
-## 🏗️ Arquitetura
+## Arquitetura
 
 - **Node.js + TypeScript**: Base da aplicação
 - **Playwright**: Automação web (login, navegação, cliques)
 - **node-cron**: Agendamento de tarefas
+- **Telegraf**: Bot do Telegram para controle remoto
 - **Persistência de sessão**: Cookies salvos em `state.json`
 - **Docker**: Containerização para produção
 
-## 📁 Estrutura do Projeto
+## Estrutura do Projeto
 
 ```
 lg-ponto-bot/
 ├── src/
-│   ├── index.ts           # Ponto de entrada principal
-│   ├── run-once.ts        # Execução única de marcação
-│   └── scheduler.ts       # Sistema de agendamento
+│   ├── index.ts           # Ponto de entrada — inicia scheduler + bot Telegram
+│   ├── run-once.ts        # Lógica principal de automação (login, navegação, marcação)
+│   ├── scheduler.ts       # Sistema de agendamento com node-cron
+│   └── telegram-bot.ts    # Bot do Telegram (comandos de controle)
 ├── logs/                  # Logs de execução e HTML dumps
 ├── screenshots/           # Screenshots das execuções
-├── .env.example          # Modelo de variáveis de ambiente
-├── schedule.json         # Configuração de horários
-├── Dockerfile            # Configuração Docker
-├── docker-compose.yml    # Orquestração Docker
-└── playwright.config.ts  # Configuração Playwright
+├── .env.example           # Modelo de variáveis de ambiente
+├── schedule.json          # Configuração de horários
+├── Dockerfile             # Imagem baseada em mcr.microsoft.com/playwright
+└── docker-compose.yml     # Orquestração Docker
 ```
 
-## 🚀 Instalação e Configuração
+## Instalação e Configuração
 
 ### Pré-requisitos
 
-- Node.js 18+ 
-- npm ou yarn
+- Node.js 18+
+- npm
 - Docker (para produção)
 
 ### 1. Clone e Instale
 
 ```bash
-# Clone do repositório (se aplicável)
 git clone <repo-url>
 cd lg-ponto-bot
 
-# Instalar dependências
 npm install
-
-# Instalar browsers do Playwright
 npx playwright install chromium
 ```
 
-### 2. Configuração
-
-#### Variáveis de Ambiente
+### 2. Variáveis de Ambiente
 
 ```bash
-# Copie o arquivo de exemplo
 cp .env.example .env
-
-# Edite com suas credenciais
-nano .env
 ```
 
 Conteúdo do `.env`:
+
 ```env
 LG_USER=seu_usuario_lg
 LG_PASS=sua_senha_lg
+
+TELEGRAM_BOT_TOKEN=token_do_bot
+TELEGRAM_CHAT_ID=seu_chat_id
+
+# Opcional: mostrar browser (padrão é headless)
+HEADLESS=false
+
 NODE_ENV=development
 ```
 
-#### Agendamento
+> Para obter o `TELEGRAM_BOT_TOKEN`, crie um bot via [@BotFather](https://t.me/BotFather).
+> Para obter o `TELEGRAM_CHAT_ID`, envie uma mensagem para o bot e consulte `https://api.telegram.org/bot<TOKEN>/getUpdates`.
 
-Edite o arquivo `schedule.json` com seus horários:
+### 3. Agendamento (opcional)
+
+Edite o `schedule.json` com os horários desejados:
 
 ```json
 [
-  {"at": "2025-09-23 22:15", "action": "start"},
-  {"at": "2025-09-23 22:40", "action": "stop"},
+  {"at": "2025-09-23 08:00", "action": "start"},
+  {"at": "2025-09-23 17:00", "action": "stop"}
 ]
 ```
 
-**Formato das datas**: `YYYY-MM-DD HH:MM`
+**Formato**: `YYYY-MM-DD HH:MM` — timezone America/Sao_Paulo.
 
-## 🖥️ Execução Local
+O arquivo é monitorado em tempo real; alterações são recarregadas automaticamente sem reiniciar o processo.
 
-### Desenvolvimento
+## Execução Local
 
 ```bash
-# Compilar TypeScript
-npm run build
-
-# Executar scheduler completo
+# Desenvolvimento (scheduler + bot Telegram)
 npm run dev
-# ou
-npm run scheduler
 
-# Executar marcação única (teste)
+# Marcação única para teste
 npm run run-once start
 npm run run-once stop
+
+# Apenas o scheduler (sem Telegram)
+npm run scheduler
 ```
 
-### Teste de Execução Única
+## Bot do Telegram
+
+O bot aceita comandos apenas do `TELEGRAM_CHAT_ID` configurado.
+
+| Comando | Descrição |
+|---|---|
+| `/start` | Exibe ajuda com todos os comandos |
+| `/agendar 08:00-12:00 13:00-18:00` | Agenda pares de entrada/saída |
+| `/unico start` | Bate ponto de entrada imediatamente |
+| `/unico stop` | Bate ponto de saída imediatamente |
+| `/status` | Lista os jobs ativos |
+| `/cancelar` | Cancela todos os jobs agendados |
+
+O bot também envia notificações automáticas após cada marcação (sucesso ou erro).
+
+## Produção com Docker
+
+### Build e execução
 
 ```bash
-# Marcar início do ponto
-npx ts-node src/run-once.ts start
-
-# Marcar fim do ponto  
-npx ts-node src/run-once.ts stop
-```
-
-## 🐳 Produção com Docker
-
-### Build da Imagem
-
-```bash
+# Build
 docker build -t lg-ponto-bot .
+
+# Com Docker Compose
+docker-compose up -d
 ```
 
-### Execução com Docker Compose
+O `docker-compose.yml` monta `schedule.json`, `logs/`, `screenshots/` e `state.json` como volumes, permitindo atualizar o agendamento sem rebuildar a imagem.
 
-1. Configure as variáveis no `.env`:
+### Variáveis no docker-compose
+
+Adicione ao `.env` (lido automaticamente pelo Compose):
 
 ```env
 LG_USER=seu_usuario
 LG_PASS=sua_senha
+TELEGRAM_BOT_TOKEN=token_do_bot
+TELEGRAM_CHAT_ID=seu_chat_id
 ```
 
-2. Execute:
+### Comandos úteis
 
 ```bash
-docker-compose up -d
-```
-
-### Comandos Docker Úteis
-
-```bash
-# Ver logs
 docker-compose logs -f
-
-# Parar o serviço
-docker-compose stop
-
-# Reiniciar
 docker-compose restart
-
-# Limpar e rebuild
-docker-compose down
-docker-compose build --no-cache
-docker-compose up -d
+docker-compose down && docker-compose build --no-cache && docker-compose up -d
 ```
 
-## 🌥️ Deploy em Produção
+## Logs e Evidências
 
-### AWS EC2
+Cada execução gera:
 
-1. **Configurar instância**:
-   - Ubuntu 20.04+ 
-   - Docker instalado
-   - Portas de segurança configuradas
+- `logs/execution.log` — log JSON por linha
+- `screenshots/ponto-<timestamp>.png` — screenshot da página
+- `logs/page-<timestamp>.html` — dump HTML para debug
 
-2. **Upload do projeto**:
-```bash
-scp -r lg-ponto-bot/ ubuntu@seu-ip:/home/ubuntu/
-```
-
-3. **Configurar no servidor**:
-```bash
-ssh ubuntu@seu-ip
-cd lg-ponto-bot/
-sudo docker-compose up -d
-```
-
-### DigitalOcean Droplet
-
-1. **Criar Droplet** com Docker pré-instalado
-2. **Configurar aplicação**:
-```bash
-git clone <seu-repo>
-cd lg-ponto-bot/
-cp .env.example .env
-nano .env  # Configure credenciais
-docker-compose up -d
-```
-
-### Monitoramento
-
-```bash
-# Status dos containers
-docker ps
-
-# Logs em tempo real
-docker-compose logs -f lg-ponto-bot
-
-# Verificar arquivos gerados
-ls -la logs/ screenshots/
-```
-
-## 📝 Funcionamento
-
-### Fluxo de Execução
-
-1. **Login**: Acessa `https://login.lg.com.br/login/bravolog`
-2. **Navegação**: Vai para função Sobreaviso
-3. **Marcação**: Clica em "MARCAR PONTO"
-4. **Evidências**: Gera screenshot e dump HTML
-5. **Log**: Registra execução com timestamps
-
-### Agendamento
-
-- Usa `node-cron` para programar execuções
-- Suporta múltiplos horários por dia
-- Recarrega automaticamente se `schedule.json` for alterado
-- Remove jobs automaticamente após execução
-
-### Persistência de Sessão
-
-- Salva cookies em `state.json`
-- Evita re-login desnecessário
-- Persiste entre reinicializações
-
-## 📊 Logs e Monitoramento
-
-### Estrutura dos Logs
+Estrutura de cada entrada no log:
 
 ```json
 {
   "scheduledTime": "2025-09-24T08:00:00.000Z",
-  "actualTime": "2025-09-24T08:00:02.123Z", 
+  "actualTime": "2025-09-24T08:00:02.123Z",
   "action": "start",
   "status": "success",
   "screenshotPath": "screenshots/ponto-2025-09-24T08-00-02-123Z.png",
@@ -238,85 +172,43 @@ ls -la logs/ screenshots/
 }
 ```
 
-### Arquivos Gerados
+## Troubleshooting
 
-- `logs/execution.log`: Log detalhado (JSON por linha)
-- `screenshots/`: Capturas de tela de cada execução
-- `logs/*.html`: Dump do HTML da página
-- `state.json`: Estado da sessão Playwright
+**Erro de login**
+- Verifique `LG_USER` e `LG_PASS`
+- Delete `state.json` para forçar novo login
 
-## 🛠️ Troubleshooting
+**Botão "MARCAR PONTO" não encontrado**
+- Veja o screenshot e o HTML dump gerados para inspecionar o estado da página
 
-### Problemas Comuns
+**Jobs não executam**
+- Confirme que as datas no `schedule.json` estão no futuro
+- Verifique o timezone (America/Sao_Paulo)
 
-**1. Erro de Login**
-```
-Verificar LG_USER e LG_PASS no .env
-Verificar se não há captcha ativado
-```
+**Bot Telegram não responde**
+- Confirme `TELEGRAM_BOT_TOKEN` e `TELEGRAM_CHAT_ID` no `.env`
+- O bot usa long-polling; certifique-se de que o processo está rodando
 
-**2. Botão não encontrado**
-```
-Verificar seletores no código se a página mudou
-Ver screenshot gerado para debug visual
-```
+**Chromium não inicia no Docker**
+- A imagem base `mcr.microsoft.com/playwright` já inclui o Chromium; não é necessário instalar separadamente
 
-**3. Jobs não executam**
-```
-Verificar formato de data no schedule.json
-Verificar timezone (America/Sao_Paulo)
-Verificar se as datas não são passadas
-```
+## Scripts Disponíveis
 
-**4. Erro Docker**
 ```
-Verificar dependências do sistema
-Rebuild da imagem: docker-compose build --no-cache
+build        — Compila TypeScript para dist/
+dev          — Executa src/index.ts com ts-node (scheduler + Telegram)
+start        — Executa dist/index.js compilado (produção)
+run-once     — Executa marcação única: npm run run-once <start|stop>
+scheduler    — Executa apenas o scheduler sem o bot Telegram
 ```
 
-### Debug
-
-```bash
-# Executar em modo desenvolvimento (com browser visível)
-NODE_ENV=development npm run dev
-
-# Ver logs detalhados
-tail -f logs/execution.log
-
-# Verificar screenshots
-ls -la screenshots/
-```
-
-## 🔒 Segurança
+## Segurança
 
 - Credenciais apenas em variáveis de ambiente
-- Container roda como usuário não-root
-- Estado de sessão em arquivo local protegido
+- Bot rejeita mensagens de chat IDs não autorizados
+- Container roda como usuário não-root (imagem oficial Playwright)
 - Logs não contêm informações sensíveis
-
-## 📋 Scripts Disponíveis
-
-```json
-{
-  "build": "tsc",                    // Compilar TypeScript
-  "dev": "ts-node src/index.ts",     // Modo desenvolvimento  
-  "start": "node dist/index.js",     // Produção (compilado)
-  "run-once": "ts-node src/run-once.ts", // Execução única
-  "scheduler": "ts-node src/scheduler.ts" // Apenas scheduler
-}
-```
-
-## 🤝 Contribuição
-
-1. Configure ambiente local
-2. Teste suas mudanças
-3. Mantenha compatibilidade Docker
-4. Atualize documentação se necessário
-
-## 📄 Licença
-
-MIT License - veja arquivo LICENSE para detalhes.
 
 ---
 
-**⚠️ Nota Importante**: Este bot automatiza interações com sistema interno. Use com responsabilidade e de acordo com as políticas da empresa.
+**Nota**: Este bot automatiza interações com sistema interno. Use de acordo com as políticas da empresa.
